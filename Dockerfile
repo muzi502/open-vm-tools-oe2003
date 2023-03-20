@@ -17,5 +17,13 @@ RUN git clone $GIT_REPO . && \
 RUN yum-builddep -y open-vm-tools.spec
 RUN rpmbuild --define "dist .oe1" -ba open-vm-tools.spec --quiet
 
+# download rpm runtime dependencies
+FROM openeuler/openeuler:20.03 as dep
+COPY --from=builder /root/rpmbuild/RPMS/ /root/rpmbuild/RPMS/
+RUN sed -i "s#repo.openeuler.org#repo.huaweicloud.com/openeuler#g" /etc/yum.repos.d/openEuler.repo && \
+    dnf install -y --downloadonly --downloaddir=/root/rpmbuild/RPMS/$(arch) /root/rpmbuild/RPMS/$(arch)/*.rpm
+
+# copy rpms to local
 FROM scratch
+COPY --from=dep /root/rpmbuild/RPMS/ /
 COPY --from=builder /root/rpmbuild/RPMS/ /
